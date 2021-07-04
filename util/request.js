@@ -6,6 +6,7 @@ const http = require('http')
 const https = require('https')
 const tunnel = require('tunnel')
 const qs = require('url')
+const match = require('@nondanee/unblockneteasemusic')
 // request.debug = true // 开启可看到更详细信息
 
 const chooseUserAgent = (ua = false) => {
@@ -50,7 +51,7 @@ const createRequest = (method, url, data, options) => {
     if (url.includes('music.163.com'))
       headers['Referer'] = 'https://music.163.com'
     if (options.realIP) headers['X-Real-IP'] = options.realIP
-    // headers['X-Real-IP'] = '118.88.88.88'
+      headers['X-Real-IP'] = '118.88.88.88'
     if (typeof options.cookie === 'object')
       headers['Cookie'] = Object.keys(options.cookie)
         .map(
@@ -127,7 +128,7 @@ const createRequest = (method, url, data, options) => {
         settings.httpAgent = new PacProxyAgent(options.proxy)
         settings.httpsAgent = new PacProxyAgent(options.proxy)
       } else {
-        var purl = qs.parse(options.proxy)
+        const purl = qs.parse(options.proxy)
         if (purl.hostname) {
           const agent = tunnel.httpsOverHttp({
             proxy: {
@@ -172,12 +173,32 @@ const createRequest = (method, url, data, options) => {
           }
         } catch (e) {
           // console.log(e)
-          answer.body = body
+          try {
+            answer.body = JSON.parse(body.toString())
+          } catch (err) {
+            // console.log(err)
+            // can't decrypt and can't parse directly
+            answer.body = body
+          }
           answer.status = res.status
         }
 
         answer.status =
           100 < answer.status && answer.status < 600 ? answer.status : 400
+
+        if (
+          settings.url ===
+          'https://interface3.music.163.com/eapi/song/enhance/player/url'
+        ) {
+          if (answer.body['data'][0].url === null) {
+            await match(answer.body['data'][0].id, ['qq', 'kuwo', 'migu']).then(
+              (res) => {
+                answer.body['data'][0].url = res.url
+              },
+            )
+          }
+        }
+
         if (answer.status === 200) resolve(answer)
         else reject(answer)
       })
