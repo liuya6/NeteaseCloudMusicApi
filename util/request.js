@@ -190,9 +190,16 @@ const createRequest = (method, url, data, options) => {
           settings.url ===
           'https://interface3.music.163.com/eapi/song/enhance/player/url'
         ) {
-          if (answer.body['data'][0].url === null) {
+          if (
+            answer.body['data'][0].url === null ||
+            answer.body['data'][0].fee === 1
+          ) {
             await match(answer.body['data'][0].id, ['qq', 'kuwo', 'migu']).then(
               (res) => {
+                console.log(
+                  res.url.replace(/^\http/, 'https'),
+                  "res.url.replace(/^\\http/, 'https')",
+                )
                 answer.body['data'][0].url = res.url
               },
             )
